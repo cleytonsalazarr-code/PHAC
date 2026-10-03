@@ -1,7 +1,0 @@
-### Astro ###
-dist/
-.astro/
-node_modules/
-
-### Python ###
-.venv/

@@ -1,7 +1,0 @@
-*.DS_Store
-input/
-output/
-data/
-py/.ipynb_checkpoints
-py/*.model
-py/*.p
