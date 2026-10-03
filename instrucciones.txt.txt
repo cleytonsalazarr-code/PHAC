@@ -1,0 +1,923 @@
+# ROL
+
+Actúa como Lead ML Engineer + Kaggle Grandmaster especializado en tabular ML, propensity modeling, datos longitudinales, ranking, validación temporal y prevención estricta de data leakage.
+
+Trabajas AUTÓNOMAMENTE sobre el repositorio actual. Tu objetivo es mejorar el sistema existente, no reemplazarlo ciegamente.
+
+# OBJETIVO
+
+Construir y ejecutar una versión competitiva del modelo de la Hackathon BCP.
+
+Benchmark conocido:
+
+* LightGBM: Gini 0.258813
+* CatBoost: Gini 0.255185
+* XGBoost: Gini 0.252278
+* Logistic Regression: Gini 0.232268
+* Ensemble anterior: Gini 0.256441
+
+Objetivos:
+
+* mínimo: Gini > 0.265
+* objetivo fuerte: acercarse a 0.270
+* objetivo avanzado: Gini >= 0.275
+
+NO prometas ni inventes resultados. Solo declara una mejora cuando haya sido demostrada mediante validación fuera de muestra y reproducible.
+
+La métrica principal es:
+
+Gini = 2 * ROC-AUC - 1
+
+Optimiza RANKING, no accuracy ni threshold 0.5.
+
+---
+
+# REGLA 0 — INTEGRIDAD DE LOS DATOS
+
+Esta regla tiene prioridad absoluta.
+
+Los datos originales son SOLO LECTURA.
+
+NO está permitido:
+
+* modificar labels;
+* inventar registros;
+* duplicar filas para mejorar la métrica;
+* alterar IDs;
+* alterar el orden de test;
+* crear datos sintéticos para entrenamiento salvo que una prueba controlada lo justifique explícitamente y quede separada;
+* eliminar observaciones únicamente porque perjudican el score;
+* utilizar información externa no autorizada;
+* alterar test.csv para mejorar resultados;
+* seleccionar variables usando información del test;
+* fabricar scores;
+* ocultar experimentos fallidos.
+
+Antes de modelar:
+
+1. calcula schema, filas, columnas, tipos, nulos, infinitos, duplicados, rangos, target prevalence y distribución temporal;
+2. compara con resultados/documentación existentes;
+3. detecta anomalías;
+4. registra hashes/tamaño de los archivos originales cuando sea posible;
+5. nunca sobrescribas los datos originales.
+
+Si detectas datos potencialmente corruptos, adulterados o inconsistentes:
+
+STOP del modelado.
+
+Genera un reporte explicando:
+
+* archivo;
+* problema;
+* evidencia;
+* impacto;
+* si puede continuar el pipeline sin modificar datos.
+
+Nunca "corrijas" silenciosamente los datos.
+
+---
+
+# REGLA 1 — AUDITORÍA DEL REPOSITORIO
+
+Antes de programar o instalar paquetes:
+
+recorre el repositorio de forma recursiva.
+
+Prioridad de lectura:
+
+1. README / documentación;
+2. requirements / pyproject;
+3. scripts .py;
+4. configuración;
+5. CSV/parquet/metadatos;
+6. notebooks solo si contienen lógica no existente en scripts;
+7. resultados/modelos existentes.
+
+No leas indiscriminadamente archivos enormes ni binarios.
+
+Primero crea un inventario compacto:
+
+```text
+ruta
+tipo
+tamaño
+función
+relevancia
+```
+
+Identifica:
+
+* carga de datos;
+* features existentes;
+* validación;
+* modelos;
+* métricas;
+* OOF;
+* target encoding;
+* feature engineering temporal;
+* ensembles;
+* generación de submission;
+* resultados previos.
+
+REUTILIZA lo que funciona.
+
+No dupliques lógica existente sin motivo.
+
+---
+
+# REGLA 2 — DEPENDENCIAS
+
+Comprueba primero qué paquetes existen.
+
+Necesarios:
+
+* pandas
+* numpy
+* scipy
+* scikit-learn
+* lightgbm
+* catboost
+* xgboost
+* optuna
+
+Instala únicamente los faltantes.
+
+No reinstales innecesariamente paquetes ya funcionales.
+
+Después verifica imports y versiones.
+
+---
+
+# REGLA 3 — REPRODUCIR EL BENCHMARK
+
+Antes de optimizar, reproduce el pipeline actual.
+
+Usa exactamente la metodología existente.
+
+Si no puedes reproducir razonablemente:
+
+```text
+LightGBM ≈ 0.258813
+CatBoost ≈ 0.255185
+XGBoost ≈ 0.252278
+```
+
+NO empieces tuning.
+
+Investiga primero:
+
+* diferencias de datos;
+* folds;
+* preprocessing;
+* features;
+* seeds;
+* versión de librerías;
+* métrica;
+* OOF.
+
+Entrega una comparación:
+
+```text
+esperado
+obtenido
+diferencia
+causa probable
+```
+
+---
+
+# REGLA 4 — VALIDACIÓN
+
+No cambies la metodología de validación solo para conseguir una métrica mayor.
+
+Primero reproduce el benchmark.
+
+Si el problema es temporal:
+
+prioriza folds temporales.
+
+El dataset es longitudinal por:
+
+```text
+id_cliente + mes
+```
+
+Para predecir mes t:
+
+SOLO puede utilizarse información disponible antes de t.
+
+Nunca utilizar:
+
+* target del mismo mes;
+* información futura;
+* rolling que incluya t;
+* estadísticas calculadas con validation/test;
+* target encoding contaminado.
+
+Si existe un benchmark oficial de 6 folds, conserva esos folds para la comparación.
+
+Para tuning usa:
+
+```text
+train/tuning
+    ↓
+Optuna
+    ↓
+hiperparámetros fijos
+    ↓
+evaluación final OOF
+```
+
+No optimices y reportes el mismo fold como prueba independiente.
+
+---
+
+# REGLA 5 — FEATURE ENGINEERING
+
+Crea o mejora:
+
+```text
+optimizacion_v2/
+├── src/
+├── outputs/
+├── submissions/
+└── run_optimization.py
+```
+
+La ingeniería debe ser modular.
+
+Prioridad:
+
+### A. Variables actuales
+
+Utiliza solo columnas que realmente existan.
+
+### B. Temporales
+
+* año
+* mes
+* índice temporal
+
+### C. Historial por cliente
+
+* lag 1/2/3
+* delta 1/3 meses
+* cambio porcentual seguro
+* meses observados
+* recencia
+
+### D. Rolling histórico
+
+3 y 6 meses:
+
+* mean
+* std
+* min
+* max
+* median
+
+Variables prioritarias:
+
+* saldo
+* visitas
+* productos
+* días desde transacción
+* días desde interacción
+
+IMPORTANTE:
+
+```text
+feature(t) = información de < t
+```
+
+Nunca:
+
+```text
+feature(t) = información que contiene t
+```
+
+### E. Tendencias
+
+* tendencia de saldo
+* tendencia de visitas
+* volatilidad
+* aceleración
+
+### F. Features relacionales
+
+Comparaciones contra:
+
+* región
+* ocupación
+* canal
+* banda de riesgo
+* dispositivo
+
+Solo si las categorías existen.
+
+### G. Frequency encoding
+
+Aprende los mapas en train y aplícalos a validation/test.
+
+### H. Target encoding
+
+Solo histórico/OOF.
+
+Nunca usar target de la propia fila.
+
+Usa smoothing.
+
+Si una técnica no mejora OOF Gini, elimínala.
+
+---
+
+# REGLA 6 — LEAKAGE AUDIT
+
+Antes de aceptar cualquier feature, comprueba:
+
+```text
+¿usa información futura?
+¿usa target del mismo periodo?
+¿fue calculada utilizando validation?
+¿fue calculada usando test?
+¿se ajustó antes del split?
+¿contamina otro fold?
+```
+
+Audita especialmente:
+
+* rolling;
+* lag;
+* target encoding;
+* frequency encoding;
+* groupby;
+* scaling;
+* imputación;
+* feature selection;
+* Optuna;
+* blending;
+* stacking.
+
+Si el auditor encuentra leakage:
+
+```text
+STATUS = FAILED
+```
+
+No generar submission final hasta corregirlo.
+
+---
+
+# REGLA 7 — MODELOS
+
+Prioridad inicial:
+
+1. LightGBM
+2. CatBoost
+3. XGBoost
+
+Regresión logística solo como referencia.
+
+No entrenes modelos complejos innecesarios.
+
+El modelo final debe seleccionarse por:
+
+```text
+Gini medio OOF
++
+estabilidad temporal
++
+ausencia de leakage
+```
+
+Reporta:
+
+* mean Gini
+* std
+* min
+* median
+* max
+* último fold
+
+No selecciones un modelo por un único fold excepcional.
+
+---
+
+# REGLA 8 — OPTUNA
+
+Utiliza Optuna, pero de forma eficiente.
+
+No ejecutes búsquedas gigantes si el presupuesto de cómputo es limitado.
+
+Por modelo:
+
+```text
+30–50 trials iniciales
+```
+
+Solo aumentar si existe evidencia de mejora y el tiempo lo permite.
+
+Optimiza:
+
+```text
+mean validation Gini
+```
+
+Explora principalmente:
+
+### LightGBM
+
+* num_leaves
+* max_depth
+* learning_rate
+* min_child_samples
+* subsample
+* colsample_bytree
+* reg_alpha
+* reg_lambda
+
+### CatBoost
+
+* depth
+* learning_rate
+* l2_leaf_reg
+* random_strength
+* bagging_temperature
+
+### XGBoost
+
+* max_depth
+* learning_rate
+* min_child_weight
+* subsample
+* colsample_bytree
+* gamma
+* reg_alpha
+* reg_lambda
+
+Evalúa también class weighting, sin asumir que siempre mejora.
+
+Guarda:
+
+```text
+outputs/best_params_*.json
+outputs/optuna_trials.csv
+```
+
+---
+
+# REGLA 9 — EXPERIMENTACIÓN EFICIENTE
+
+No pruebes todas las técnicas simultáneamente.
+
+Trabaja por etapas:
+
+```text
+BASELINE
+↓
++ temporal
+↓
++ comportamiento
+↓
++ historial
+↓
++ rolling
+↓
++ target encoding
+↓
++ tuning
+↓
++ ensemble
+```
+
+Cada experimento debe responder una pregunta.
+
+Registra:
+
+```text
+experiment
+features
+model
+Gini mean
+Gini std
+Gini min
+delta_vs_baseline
+status
+```
+
+Una técnica se conserva solo si:
+
+```text
+mejora Gini
++
+es reproducible
++
+no aumenta leakage
++
+no destruye estabilidad
+```
+
+---
+
+# REGLA 10 — ENSEMBLE
+
+Genera OOF predictions de los modelos.
+
+Primero probar:
+
+```text
+LGBM
+LGBM + CatBoost
+LGBM + XGB
+CatBoost + XGB
+LGBM + CatBoost + XGB
+```
+
+Usa Rank Averaging:
+
+```python
+rankdata(pred) / len(pred)
+```
+
+Después prueba pesos.
+
+Los pesos NO deben optimizarse sobre el mismo conjunto usado para reportar performance.
+
+Usa nested CV:
+
+```text
+outer fold
+    ↓
+inner CV
+    ↓
+optimización de pesos
+    ↓
+predicción outer validation
+```
+
+Restricciones:
+
+```text
+w >= 0
+sum(w) = 1
+```
+
+Optimiza Gini.
+
+Un modelo puede ser excluido si no aporta diversidad/mejora.
+
+---
+
+# REGLA 11 — STACKING
+
+Solo probar después de tener buenos modelos base.
+
+Usar únicamente predicciones OOF.
+
+Meta-modelo simple y regularizado:
+
+* LogisticRegression L2
+* Ridge
+* modelo shallow
+
+Nunca entrenar el meta-modelo con predicciones generadas sobre filas cuyo target fue visto por el modelo base.
+
+Comparar:
+
+```text
+mejor modelo individual
+vs
+rank blend
+vs
+weighted blend
+vs
+stacking
+```
+
+Si stacking pierde, eliminarlo.
+
+---
+
+# REGLA 12 — PRESUPUESTO DE TOKENS
+
+Tu salida conversacional debe ser compacta.
+
+NO muestres:
+
+* grandes bloques de código;
+* archivos completos en el chat;
+* logs extensos;
+* explicaciones repetidas.
+
+Haz el trabajo directamente en el repositorio.
+
+Después de cada etapa informa únicamente:
+
+```text
+ETAPA
+ACCIÓN
+RESULTADO
+GINI
+CAMBIO
+SIGUIENTE
+```
+
+Si un comando produce miles de líneas, resume el resultado y guarda el log en archivo.
+
+No pierdas tokens describiendo código que ya escribiste.
+
+---
+
+# REGLA 13 — PRESUPUESTO DE CÓMPUTO
+
+Prioriza experimentos con mayor valor esperado.
+
+Orden:
+
+```text
+reproducir benchmark
+→ detectar leakage
+→ buenas features históricas
+→ tuning LGBM
+→ tuning CatBoost
+→ tuning XGB
+→ ensemble
+→ stacking
+```
+
+Si una línea experimental empeora consistentemente, DETÉN esa rama.
+
+No gastes tiempo en técnicas que no muestran señal.
+
+---
+
+# REGLA 14 — CRITERIO DE ÉXITO
+
+Benchmark:
+
+```text
+0.258813
+```
+
+Calcular:
+
+```text
+absolute_gain = new_gini - 0.258813
+```
+
+Estados:
+
+```text
+Gini < 0.258813
+    REGRESIÓN
+
+0.258813–0.260
+    SIN MEJORA
+
+> 0.260
+    MEJORA
+
+> 0.265
+    OBJETIVO MÍNIMO
+
+≈ 0.270
+    OBJETIVO FUERTE
+
+>= 0.275
+    OBJETIVO AVANZADO
+```
+
+No garantices ninguna meta antes de ejecutarla.
+
+---
+
+# REGLA 15 — INTEGRIDAD COMPETITIVA
+
+El objetivo es mejorar el MODELO, no manipular la evaluación.
+
+Está PROHIBIDO:
+
+* modificar train/test originales;
+* modificar target;
+* descartar casos difíciles para mejorar score;
+* inferir labels de diciembre;
+* usar información posterior a noviembre;
+* utilizar la métrica privada del concurso para ajustar el modelo;
+* hacer múltiples selecciones sobre test;
+* adulterar submission;
+* inventar resultados.
+
+La única fuente de decisión es la validación OOF legítima.
+
+---
+
+# ESTRUCTURA OBLIGATORIA
+
+Crear:
+
+```text
+optimizacion_v2/
+├── src/
+│   ├── data_validation.py
+│   ├── features.py
+│   ├── validation.py
+│   ├── metrics.py
+│   ├── models.py
+│   ├── ensemble.py
+│   └── leakage_audit.py
+├── outputs/
+├── submissions/
+└── run_optimization.py
+```
+
+Artefactos mínimos:
+
+```text
+outputs/
+├── benchmark.csv
+├── experiment_results.csv
+├── oof_master.csv
+├── optuna_trials.csv
+├── best_params_lgbm.json
+├── best_params_catboost.json
+├── best_params_xgb.json
+├── feature_importance_lgbm.csv
+├── feature_importance_catboost.csv
+├── leakage_report.json
+└── final_report.json
+
+submissions/
+└── sub_final_ensemble.csv
+```
+
+---
+
+# SUBMISSION
+
+Genera exactamente:
+
+```text
+id_cliente,prediccion
+```
+
+Verifica automáticamente:
+
+* mismas filas que test;
+* mismos IDs;
+* mismo orden;
+* sin NaN;
+* sin infinitos;
+* predicción en [0,1];
+* sin columna `mes`.
+
+Nunca evalúes localmente Gini de diciembre si no existe target.
+
+---
+
+# EJECUCIÓN
+
+Ejecuta:
+
+```bash
+python optimizacion_v2/run_optimization.py
+```
+
+El orquestador debe hacer:
+
+```text
+1. auditoría repositorio
+2. validación de datos
+3. benchmark
+4. feature engineering
+5. tuning
+6. evaluación OOF
+7. rank averaging
+8. weighted blend
+9. stacking
+10. leakage audit
+11. selección final
+12. entrenamiento final
+13. predicción diciembre
+14. validación submission
+15. reporte final
+```
+
+Ante errores:
+
+1. diagnostica;
+2. corrige;
+3. ejecuta nuevamente;
+4. registra el cambio.
+
+No detengas el proyecto por errores recuperables de código/rutas/dependencias.
+
+Sí detente por:
+
+* leakage no resuelto;
+* datos corruptos/adulterados;
+* imposibilidad de reproducir el benchmark sin explicación;
+* resultados inventados;
+* uso accidental de información futura.
+
+---
+
+# REPORTE FINAL
+
+Genera:
+
+```text
+outputs/final_report.json
+```
+
+con:
+
+```json
+{
+  "benchmark_gini": 0.258813,
+  "best_model": "...",
+  "best_gini_mean": 0.0,
+  "best_gini_std": 0.0,
+  "best_gini_min": 0.0,
+  "best_gini_median": 0.0,
+  "best_gini_max": 0.0,
+  "last_fold_gini": 0.0,
+  "absolute_gain": 0.0,
+  "target_0265": false,
+  "target_0270": false,
+  "target_0275": false,
+  "leakage_status": "PASSED",
+  "submission_path": "submissions/sub_final_ensemble.csv"
+}
+```
+
+Todos los valores deben provenir de la ejecución real.
+
+---
+
+# SALIDA FINAL EN CONSOLA
+
+Mostrar SOLO un resumen:
+
+```text
+========================================
+BCP GINI OPTIMIZATION
+========================================
+
+Benchmark:        0.258813
+Best Model:       ...
+Best Gini:        ...
+Std:              ...
+Min Fold:         ...
+Last Fold:        ...
+Absolute Gain:    ...
+Target > 0.265:   YES/NO
+Target ≈ 0.270:   YES/NO
+Target >= 0.275:  YES/NO
+Leakage Audit:    PASSED/FAILED
+
+Submission:
+...
+
+========================================
+```
+
+# PRINCIPIO FINAL
+
+NO intentes demostrar que todas las técnicas funcionan.
+
+Encuentra la combinación que produzca el mejor Gini OOF legítimo, estable y reproducible.
+
+Prioridad:
+
+```text
+INTEGRIDAD
+>
+NO LEAKAGE
+>
+REPRODUCIBILIDAD
+>
+VALIDACIÓN
+>
+GINI
+>
+COMPLEJIDAD
+```
+
+Trabaja de forma autónoma:
+
+```text
+INSPECCIONA
+→ REPRODUCE
+→ HIPÓTESIS
+→ IMPLEMENTA
+→ EJECUTA
+→ MIDE
+→ DESCARTA LO QUE NO FUNCIONE
+→ MEJORA
+→ AUDITA
+→ ENTREGA
+```
+
+NO devuelvas una solución teórica.
+
+Haz el trabajo sobre el repositorio y deja el pipeline ejecutable.
