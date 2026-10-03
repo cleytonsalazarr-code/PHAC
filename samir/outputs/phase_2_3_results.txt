@@ -1,0 +1,20 @@
+Fecha: 2026-10-02 01:04:18.158272
+Python: 3.13.14 (tags/v3.13.14:fd17997, Jun 10 2026, 13:03:48) [MSC v.1944 64 bit (AMD64)]
+LightGBM: 4.7.0
+Train shape: (110100, 25)
+Test shape: (9900, 24)
+Features originales: 23
+Features nuevas: 22
+Features total: 45
+Baseline Mean Gini: 0.25468
+Baseline Last Fold Gini: 0.24607
+Longitudinal Mean Gini: 0.25373
+Longitudinal Last Fold Gini: 0.24770
+Improvement: -0.00095
+Fold Ginis: [0.2631262723314709, 0.23506751038437934, 0.2690232827031733, 0.24769989152379557]
+Fold AUCs: [0.6315631361657355, 0.6175337551921897, 0.6345116413515867, 0.6238499457618978]
+Best Iterations: [366, 3, 42, 5]
+Submission: C:\Users\LEGION\Desktop\Cleyton_S\Ciclo 6\Hackaton\submissions\sub_v2_longitudinal.csv
+OOF: C:\Users\LEGION\Desktop\Cleyton_S\Ciclo 6\Hackaton\outputs\oof_predictions.csv
+Feature Importance: C:\Users\LEGION\Desktop\Cleyton_S\Ciclo 6\Hackaton\outputs\feature_importance.csv
+Leakage: PASSED

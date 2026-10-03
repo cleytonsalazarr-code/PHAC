@@ -1,0 +1,215 @@
+---
+import { siteConfig } from "../config/site";
+
+const [brandPrimary = siteConfig.title, ...brandSecondaryWords] =
+  siteConfig.title.split(" ");
+const brandSecondary = brandSecondaryWords.join(" ");
+---
+
+<header class="site-header">
+  <div class="shell site-header__inner">
+    <div class="site-header__spacer" aria-hidden="true"></div>
+    <a class="brand" href="/" aria-label={siteConfig.title}>
+      <span class="brand__text">
+        <span class="brand__primary">{brandPrimary}</span>
+        {
+          brandSecondary && (
+            <span class="brand__secondary">{brandSecondary}</span>
+          )
+        }
+      </span>
+    </a>
+    <div class="site-header__actions">
+      <button
+        id="theme-toggle"
+        class="theme-toggle"
+        type="button"
+        aria-label="Theme: system"
+        title="Theme: system"
+      >
+        <svg
+          id="system-light-icon"
+          class="theme-toggle__icon is-active"
+          xmlns="http://www.w3.org/2000/svg"
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.4"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path
+            opacity="0.5"
+            d="M5.411 14.504c.06 0 .121 0 .18 0-1.952 1.815-1.208 5.065 1.34 5.848.762.234 1.581.199 2.319-.1-1.227 2.955-5.194 3.473-7.14.932-1.944-2.542-.408-6.235 2.764-6.648.177-.024.357-.036.537-.036v.004Z"
+          ></path>
+          <path d="M14.5 3.25v-2"></path>
+          <path d="M14.5 15.85v2"></path>
+          <path d="m10.044 5.094-1.414-1.414"></path>
+          <path d="m19 14.05 1.414 1.414"></path>
+          <path d="M8.2 9.55h-2"></path>
+          <path d="M20.8 9.55h2"></path>
+          <path d="M10.044 14.006 8.63 15.42"></path>
+          <path d="m19 5.05 1.414-1.414"></path>
+          <circle cx="14.5" cy="9.55" r="3.6"></circle>
+        </svg>
+        <svg
+          id="system-dark-icon"
+          class="theme-toggle__icon"
+          xmlns="http://www.w3.org/2000/svg"
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.4"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M8.282 7.007c.103 0 .212 0 .313 0-3.415 3.177-2.114 8.862 2.347 10.233 1.333.408 2.764.349 4.058-.174-2.149 5.17-9.09 6.077-12.495 1.63C-.897 14.249 1.791 7.786 7.342 7.063A7.1 7.1 0 0 1 8.282 7v.007Z"></path>
+          <path opacity="0.5" d="M18 3.705V2.5"></path>
+          <path opacity="0.5" d="M18 11.295V12.5"></path>
+          <path opacity="0.5" d="m15.316 4.816-.852-.852"></path>
+          <path opacity="0.5" d="m20.711 10.212.852.851"></path>
+          <path opacity="0.5" d="M14.205 7.5h-1.204"></path>
+          <path opacity="0.5" d="M21.795 7.5H23"></path>
+          <path opacity="0.5" d="m15.316 10.184-.852.852"></path>
+          <path opacity="0.5" d="m20.711 4.789.852-.852"></path>
+          <circle opacity="0.5" cx="18" cy="7.5" r="2.169"></circle>
+        </svg>
+        <svg
+          id="light-icon"
+          class="theme-toggle__icon"
+          xmlns="http://www.w3.org/2000/svg"
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <circle cx="12" cy="12" r="4.5"></circle>
+          <path d="M12 3v1.5"></path>
+          <path d="M12 19.5V21"></path>
+          <path d="M3 12h1.5"></path>
+          <path d="M19.5 12H21"></path>
+          <path d="m5.64 5.64 1.06 1.06"></path>
+          <path d="m17.3 17.3 1.06 1.06"></path>
+          <path d="m18.36 5.64-1.06 1.06"></path>
+          <path d="m6.7 17.3-1.06 1.06"></path>
+        </svg>
+        <svg
+          id="dark-icon"
+          class="theme-toggle__icon"
+          xmlns="http://www.w3.org/2000/svg"
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path>
+        </svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<script is:inline>
+  const STORAGE_KEY = "theme-preference";
+  const root = document.documentElement;
+  const media = window.matchMedia("(prefers-color-scheme: dark)");
+  const themeOrder = ["system", "light", "dark"];
+  const themeToggle = document.getElementById("theme-toggle");
+  const metaTheme = document.querySelector('meta[name="theme-color"]');
+  const COLORS = { light: "#8c1515", dark: "#171513" };
+
+  const resolveTheme = (theme) =>
+    theme === "system" ? (media.matches ? "dark" : "light") : theme;
+
+  const getThemePreference = () => {
+    try {
+      return (
+        localStorage.getItem(STORAGE_KEY) ||
+        root.dataset.themePreference ||
+        "system"
+      );
+    } catch {
+      return root.dataset.themePreference || "system";
+    }
+  };
+
+  const syncThemeToggle = (theme) => {
+    const resolvedTheme = resolveTheme(theme);
+    document
+      .getElementById("system-light-icon")
+      ?.classList.toggle(
+        "is-active",
+        theme === "system" && resolvedTheme === "light",
+      );
+    document
+      .getElementById("system-dark-icon")
+      ?.classList.toggle(
+        "is-active",
+        theme === "system" && resolvedTheme === "dark",
+      );
+    document
+      .getElementById("light-icon")
+      ?.classList.toggle("is-active", theme === "light");
+    document
+      .getElementById("dark-icon")
+      ?.classList.toggle("is-active", theme === "dark");
+
+    if (themeToggle) {
+      themeToggle.setAttribute("aria-label", `Theme: ${theme}`);
+      themeToggle.setAttribute("title", `Theme: ${theme}`);
+    }
+  };
+
+  const applyTheme = (theme) => {
+    const resolvedTheme = resolveTheme(theme);
+    root.dataset.themePreference = theme;
+    root.dataset.theme = resolvedTheme;
+    root.style.colorScheme = resolvedTheme;
+
+    if (metaTheme) {
+      metaTheme.setAttribute("content", COLORS[resolvedTheme]);
+    }
+
+    syncThemeToggle(theme);
+  };
+
+  const persistTheme = (theme) => {
+    try {
+      localStorage.setItem(STORAGE_KEY, theme);
+    } catch {
+      return;
+    }
+  };
+
+  themeToggle?.addEventListener("click", () => {
+    const currentTheme = getThemePreference();
+    const currentIndex = themeOrder.indexOf(currentTheme);
+    const nextTheme = themeOrder[(currentIndex + 1) % themeOrder.length];
+    persistTheme(nextTheme);
+    applyTheme(nextTheme);
+  });
+
+  media.addEventListener("change", () => {
+    if (getThemePreference() === "system") {
+      applyTheme("system");
+    }
+  });
+
+  applyTheme(getThemePreference());
+</script>
